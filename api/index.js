@@ -1,12 +1,13 @@
-// api/index.js  →  handles  GET /?key=YOURKEY&q=@username
+// api/index.js  →  GET /?key=YOURKEY&q=@username
 
-const https = require("https");
-const http  = require("http");
-const store = require("../lib/store");
+const https    = require("https");
+const http     = require("http");
+const store    = require("../lib/store");
+const { sendTelegram } = require("../lib/telegram");
 
 // ── Cache ─────────────────────────────────────────────────────────────────────
 const _cache    = new Map();
-const CACHE_TTL = 15 * 60 * 1000; // 15 min
+const CACHE_TTL = 15 * 60 * 1000;
 
 function cacheGet(q) {
   const e = _cache.get(q);
@@ -51,84 +52,96 @@ function cors(res) {
 module.exports = async function handler(req, res) {
   cors(res);
   res.setHeader("Content-Type", "application/json");
-
   if (req.method === "OPTIONS") { res.status(200).end(); return; }
   if (req.method !== "GET")     { res.status(405).json({ error: "Method not allowed" }); return; }
 
   const { key, q } = req.query;
+  const ip = req.headers["x-forwarded-for"]?.split(",")[0].trim() || req.socket?.remoteAddress || "—";
 
-  // ── 1. Key auth ─────────────────────────────────────────────────────────────
+  // ── 1. Key check ─────────────────────────────────────────────────────────────
   if (!key) {
-    return res.status(401).json({
-      error:   "Missing API key",
-      message: "Usage: /?key=YOUR_KEY&q=@username"
-    });
+    // Fire and forget — don't await alerts
+    store.recordRejected("—", q || "—", ip, "No key provided");
+    sendTelegram(
+      `🚨 <b>TGOSINT — No Key</b>\n` +
+      `📍 IP: <code>${ip}</code>\n` +
+      `🔍 Query: <code>${q || "—"}</code>\n` +
+      `❌ Reason: No API key provided`
+    );
+    return res.status(401).json({ error: "Missing API key.", hint: "Usage: /?key=YOUR_KEY&q=@username" });
   }
 
   const keyData = store.getKey(key);
+
   if (!keyData) {
-    return res.status(401).json({ error: "Invalid API key" });
-  }
-  if (!keyData.active) {
-    return res.status(403).json({ error: "API key disabled. Contact @4nsil" });
+    store.recordRejected(key, q || "—", ip, "Invalid key");
+    sendTelegram(
+      `🚨 <b>TGOSINT — Invalid Key Attempt</b>\n` +
+      `🔑 Key tried: <code>${key}</code>\n` +
+      `📍 IP: <code>${ip}</code>\n` +
+      `🔍 Query: <code>${q || "—"}</code>\n` +
+      `❌ Reason: Key not found`
+    );
+    return res.status(401).json({ error: "Invalid API key." });
   }
 
-  // ── 2. Query check ──────────────────────────────────────────────────────────
+  if (!keyData.active) {
+    store.recordRejected(key, q || "—", ip, "Key blocked");
+    sendTelegram(
+      `🚨 <b>TGOSINT — Blocked Key Used</b>\n` +
+      `🔑 Key: <code>${key}</code> (${keyData.label || key})\n` +
+      `📍 IP: <code>${ip}</code>\n` +
+      `🔍 Query: <code>${q || "—"}</code>\n` +
+      `❌ Reason: Key is blocked`
+    );
+    return res.status(403).json({ error: "API key disabled. Contact @drazeforce" });
+  }
+
+  // ── 2. Query check ────────────────────────────────────────────────────────────
   if (!q || q.trim() === "") {
-    return res.status(400).json({
-      error:   "Missing query",
-      message: "Usage: /?key=YOUR_KEY&q=@username"
-    });
+    return res.status(400).json({ error: "Missing query.", hint: "Usage: /?key=YOUR_KEY&q=@username" });
   }
 
   const cleanQ = q.trim();
 
-  // ── 3. Record usage ─────────────────────────────────────────────────────────
-  const ip = req.headers["x-forwarded-for"] || req.socket?.remoteAddress || "—";
+  // ── 3. Record + alert ─────────────────────────────────────────────────────────
   store.recordRequest(key, cleanQ, ip);
+  sendTelegram(
+    `✅ <b>TGOSINT — New Request</b>\n` +
+    `🔑 Key: <code>${key}</code> (${keyData.label || key})\n` +
+    `🔍 Query: <code>${cleanQ}</code>\n` +
+    `📍 IP: <code>${ip}</code>\n` +
+    `🕐 Time: ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} IST`
+  );
 
-  // ── 4. Cache ─────────────────────────────────────────────────────────────────
+  // ── 4. Cache ──────────────────────────────────────────────────────────────────
   const cached = cacheGet(cleanQ);
   if (cached) {
     res.setHeader("X-Cache", "HIT");
     return res.status(200).json(cached);
   }
 
-  // ── 5. Upstream call (HIDDEN — never exposed to caller) ──────────────────────
+  // ── 5. Upstream call ──────────────────────────────────────────────────────────
   const UPSTREAM_KEY = process.env.UPSTREAM_KEY;
   const UPSTREAM_URL = process.env.UPSTREAM_URL || "https://tg-to-num-six.vercel.app/";
+  if (!UPSTREAM_KEY) return res.status(500).json({ error: "Service not configured. Contact @drazeforce" });
 
-  if (!UPSTREAM_KEY) {
-    return res.status(500).json({ error: "Service not configured. Contact @4nsil" });
-  }
-
-  // Build upstream URL — stays 100% server-side
   const upstreamURL = `${UPSTREAM_URL}?key=${UPSTREAM_KEY}&q=${encodeURIComponent(cleanQ)}`;
 
   try {
     const { status, body } = await fetchJSON(upstreamURL, 12000);
+    if (status !== 200) return res.status(502).json({ error: `Lookup failed (${status})` });
 
-    if (status !== 200) {
-      return res.status(502).json({ error: `Lookup failed (${status})` });
-    }
-
-    // Remove upstream branding, add ours
+    // Strip upstream branding, add ours
     const { credit, owner, admin, help_group, your_usage, note, ...clean } = body;
-    const final = {
-      ...clean,
-      credit: "@drazeforce",
-      owner:  "@drazeforce",
-      admin:  "@drazeforce",
-    };
+    const final = { ...clean, credit: "@drazeforce", owner: "@drazeforce", admin: "@drazeforce" };
 
     cacheSet(cleanQ, final);
     res.setHeader("X-Cache", "MISS");
     return res.status(200).json(final);
 
   } catch (err) {
-    if (err.message === "TIMEOUT") {
-      return res.status(504).json({ error: "Request timed out — try again" });
-    }
+    if (err.message === "TIMEOUT") return res.status(504).json({ error: "Request timed out — try again" });
     console.error("[4NSIL]", err.message);
     return res.status(500).json({ error: "Lookup failed — try again" });
   }

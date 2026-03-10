@@ -1,6 +1,4 @@
-// api/admin/log.js
-// GET /api/admin/log?adminkey=X  → returns request log
-
+// api/admin/log.js — GET /api/admin/log?adminkey=X&limit=100
 const store = require("../../lib/store");
 
 function cors(res) {
@@ -9,7 +7,7 @@ function cors(res) {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 }
 
-module.exports = function handler(req, res) {
+module.exports = async function handler(req, res) {
   cors(res);
   res.setHeader("Content-Type", "application/json");
   if (req.method === "OPTIONS") { res.status(200).end(); return; }
@@ -19,5 +17,8 @@ module.exports = function handler(req, res) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
-  return res.status(200).json({ log: store.getLog() });
+  const limit = Math.min(parseInt(req.query.limit) || 100, 500);
+  const log   = await store.getLog(limit);
+
+  return res.status(200).json({ log });
 };

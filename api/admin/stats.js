@@ -1,6 +1,4 @@
-// api/admin/stats.js
-// GET /api/admin/stats?adminkey=X  → returns global usage data for graph
-
+// api/admin/stats.js — GET /api/admin/stats?adminkey=X
 const store = require("../../lib/store");
 
 function cors(res) {
@@ -9,7 +7,7 @@ function cors(res) {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 }
 
-module.exports = function handler(req, res) {
+module.exports = async function handler(req, res) {
   cors(res);
   res.setHeader("Content-Type", "application/json");
   if (req.method === "OPTIONS") { res.status(200).end(); return; }
@@ -19,5 +17,10 @@ module.exports = function handler(req, res) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
-  return res.status(200).json({ usage: store.getGlobalUsage() });
+  const [usage, rejected] = await Promise.all([
+    store.getGlobalUsage(),
+    store.getRejectedUsage(),
+  ]);
+
+  return res.status(200).json({ usage, rejected });
 };

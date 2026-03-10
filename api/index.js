@@ -111,9 +111,18 @@ module.exports = async function handler(req, res) {
       return res.status(502).json({ error: `Lookup failed (${status})` });
     }
 
-    cacheSet(cleanQ, body);
+    // Remove upstream branding, add ours
+    const { credit, owner, admin, help_group, your_usage, note, ...clean } = body;
+    const final = {
+      ...clean,
+      credit: "@drazeforce",
+      owner:  "@drazeforce",
+      admin:  "@drazeforce",
+    };
+
+    cacheSet(cleanQ, final);
     res.setHeader("X-Cache", "MISS");
-    return res.status(200).json(body);
+    return res.status(200).json(final);
 
   } catch (err) {
     if (err.message === "TIMEOUT") {

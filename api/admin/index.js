@@ -308,9 +308,26 @@ const TODAY = new Date().toISOString().slice(0,10);
 let _key="", _data={}, _filtered=null, _log=[], _logFilter="all";
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
-function doLogin(){ _key=document.getElementById("adminInp").value.trim(); if(!_key)return; loadKeys(true); }
+function doLogin(){
+  _key=document.getElementById("adminInp").value.trim();
+  if(!_key)return;
+  loadKeys(true);
+}
 document.getElementById("adminInp").addEventListener("keydown",e=>{ if(e.key==="Enter")doLogin(); });
-function logout(){ _key="";_data={}; document.getElementById("dash").style.display="none"; document.getElementById("loginWrap").style.display="flex"; document.getElementById("adminInp").value=""; }
+
+function logout(){
+  _key="";_data={};
+  sessionStorage.removeItem("tgosint_admin");
+  document.getElementById("dash").style.display="none";
+  document.getElementById("loginWrap").style.display="flex";
+  document.getElementById("adminInp").value="";
+}
+
+// Auto-login if session exists
+(function(){
+  const saved = sessionStorage.getItem("tgosint_admin");
+  if(saved){ _key=saved; loadKeys(true); }
+})();
 
 // ── API calls ─────────────────────────────────────────────────────────────────
 async function api(method, body, extraQuery="", endpoint="/api/admin/keys"){
@@ -326,7 +343,7 @@ function refreshAll(){ loadKeys(); loadLog(); loadGraph(); }
 async function loadKeys(isLogin=false){
   const{ok,data}=await api("GET");
   if(!ok){ if(isLogin){const e=document.getElementById("lerr");e.style.display="block";setTimeout(()=>e.style.display="none",3000);} return; }
-  if(isLogin){ document.getElementById("loginWrap").style.display="none"; document.getElementById("dash").style.display="block"; loadLog(); loadGraph(); }
+  if(isLogin){ sessionStorage.setItem("tgosint_admin",_key); document.getElementById("loginWrap").style.display="none"; document.getElementById("dash").style.display="block"; loadLog(); loadGraph(); }
   _data=data.keys||{}; _filtered=null; renderStats(); renderKeys();
 }
 

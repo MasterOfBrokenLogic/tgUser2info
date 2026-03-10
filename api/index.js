@@ -71,7 +71,7 @@ module.exports = async function handler(req, res) {
     return res.status(401).json({ error: "Missing API key.", hint: "Usage: /?key=YOUR_KEY&q=@username" });
   }
 
-  const keyData = store.getKey(key);
+  const keyData = await store.getKey(key);
 
   if (!keyData) {
     store.recordRejected(key, q || "—", ip, "Invalid key");

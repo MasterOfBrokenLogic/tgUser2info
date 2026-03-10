@@ -381,6 +381,7 @@ function renderKeys(){
       <div class="mchart"><div class="mc-title">LAST 7 DAYS</div><div class="mbars">\${bars}</div></div>
       <div class="kacts">
         <button class="kbtn copy" data-a="copy" data-k="\${ks}">COPY KEY</button>
+        <button class="kbtn copy" data-a="copyapi" data-k="\${ks}">COPY API URL</button>
         \${blockBtn}
         <button class="kbtn del" data-a="del" data-k="\${ks}">DELETE</button>
       </div>
@@ -388,6 +389,7 @@ function renderKeys(){
   }).join("");
   grid.onclick=e=>{ const b=e.target.closest("[data-a]"); if(!b)return; const{a,k}=b.dataset;
     if(a==="copy") copyKey(k,b);
+    if(a==="copyapi") copyApiUrl(k,b);
     if(a==="block") confirm2(\`BLOCK KEY: \${k}\`,\`Block "\${k}"? All requests with this key will be rejected.\`,()=>toggle(k,false));
     if(a==="unblock") confirm2(\`UNBLOCK KEY: \${k}\`,\`Restore access for "\${k}"?\`,()=>toggle(k,true));
     if(a==="del") confirm2(\`DELETE KEY: \${k}\`,\`Permanently delete "\${k}"? Cannot be undone.\`,()=>del(k));
@@ -476,6 +478,7 @@ async function addKey(){
 async function toggle(ks,active){ await api("PATCH",{key:ks,active}); loadKeys(); }
 async function del(ks){ await api("DELETE",null,\`&key=\${encodeURIComponent(ks)}\`); loadKeys(); }
 function copyKey(ks,btn){ navigator.clipboard.writeText(ks).then(()=>{ const o=btn.textContent;btn.textContent="COPIED!";btn.style.color="var(--green)";setTimeout(()=>{btn.textContent=o;btn.style.color="";},1500); }); }
+function copyApiUrl(ks,btn){ const url=\`https://tgosint.vercel.app/?key=\${ks}&q=@username\`; navigator.clipboard.writeText(url).then(()=>{ const o=btn.textContent;btn.textContent="COPIED!";btn.style.color="var(--cyan)";setTimeout(()=>{btn.textContent=o;btn.style.color="";},1500); }); }
 
 // ── Modals ────────────────────────────────────────────────────────────────────
 function openAdd(){ document.getElementById("addModal").classList.add("open"); setTimeout(()=>document.getElementById("nkStr").focus(),80); }

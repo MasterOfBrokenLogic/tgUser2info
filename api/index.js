@@ -84,7 +84,8 @@ module.exports = async function handler(req, res) {
   const cleanQ = q.trim();
 
   // ── 3. Record usage ─────────────────────────────────────────────────────────
-  store.recordRequest(key);
+  const ip = req.headers["x-forwarded-for"] || req.socket?.remoteAddress || "—";
+  store.recordRequest(key, cleanQ, ip);
 
   // ── 4. Cache ─────────────────────────────────────────────────────────────────
   const cached = cacheGet(cleanQ);

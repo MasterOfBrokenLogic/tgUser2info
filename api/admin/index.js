@@ -188,6 +188,44 @@ header{
 footer{text-align:center;padding:20px;font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:3px;color:var(--muted);border-top:1px solid var(--border);}
 footer a{color:inherit;text-decoration:none;transition:color 0.2s;}
 footer a:hover{color:var(--green);}
+
+/* ── Request Log ──────────────────────────────────────────────────────────── */
+.log-table{width:100%;border-collapse:collapse;font-family:'Share Tech Mono',monospace;font-size:11px;}
+.log-table th{
+  padding:10px 14px;text-align:left;font-size:8px;letter-spacing:3px;
+  color:var(--muted);border-bottom:1px solid var(--border);font-weight:normal;
+}
+.log-table td{padding:9px 14px;border-bottom:1px solid rgba(15,42,30,0.6);vertical-align:middle;}
+.log-table tr:hover td{background:rgba(0,255,136,0.02);}
+.log-table tr:last-child td{border-bottom:none;}
+.ltag{
+  font-size:9px;letter-spacing:1px;padding:2px 7px;border:1px solid var(--dim);
+  color:var(--cyan);display:inline-block;
+}
+.log-wrap{overflow-x:auto;max-height:420px;overflow-y:auto;}
+.log-wrap::-webkit-scrollbar{width:4px;height:4px;}
+.log-wrap::-webkit-scrollbar-track{background:transparent;}
+.log-wrap::-webkit-scrollbar-thumb{background:var(--dim);}
+.no-log{padding:32px;text-align:center;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:3px;color:var(--muted);}
+
+/* ── Overall Graph ────────────────────────────────────────────────────────── */
+.graph-wrap{padding:20px 18px 16px;}
+.graph-canvas-wrap{position:relative;height:180px;width:100%;}
+.graph-bars{display:flex;gap:4px;align-items:flex-end;height:150px;padding-bottom:4px;}
+.gb-wrap{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;cursor:default;}
+.gb{width:100%;border-radius:2px 2px 0 0;transition:opacity 0.2s;min-height:3px;position:relative;}
+.gb:hover{opacity:0.8;}
+.gb-tooltip{
+  display:none;position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);
+  background:var(--surface);border:1px solid var(--green);padding:4px 8px;white-space:nowrap;
+  font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--green);z-index:10;
+  pointer-events:none;
+}
+.gb:hover .gb-tooltip{display:block;}
+.gb-lbl{font-family:'Share Tech Mono',monospace;font-size:7px;color:var(--muted);text-align:center;}
+.graph-legend{display:flex;gap:20px;margin-top:14px;flex-wrap:wrap;}
+.gl-item{display:flex;align-items:center;gap:6px;font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);}
+.gl-dot{width:8px;height:8px;border-radius:50%;}
 </style>
 </head>
 <body>
@@ -229,6 +267,24 @@ footer a:hover{color:var(--green);}
       <div class="stat"><div class="sv" id="sToday" style="color:var(--yellow)">—</div><div class="sl">TODAY</div></div>
     </div>
 
+
+    <!-- Overall Usage Graph -->
+    <div class="sec" id="graphSec">
+      <div class="sec-hdr">
+        <div class="sec-title">// OVERALL API USAGE</div>
+        <span style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;">LAST 30 DAYS</span>
+      </div>
+      <div class="graph-wrap">
+        <div class="graph-bars" id="graphBars">
+          <div class="no-keys"><span class="spin"></span> LOADING...</div>
+        </div>
+        <div class="graph-legend">
+          <div class="gl-item"><div class="gl-dot" style="background:var(--green)"></div> PAST DAYS</div>
+          <div class="gl-item"><div class="gl-dot" style="background:var(--cyan)"></div> TODAY</div>
+        </div>
+      </div>
+    </div>
+
     <!-- Keys -->
     <div class="sec">
       <div class="sec-hdr">
@@ -246,6 +302,31 @@ footer a:hover{color:var(--green);}
     </div>
 
   </div>
+
+    <!-- Request Log -->
+    <div class="sec">
+      <div class="sec-hdr">
+        <div class="sec-title">// REQUEST LOG</div>
+        <span style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;">LAST 200 REQUESTS &nbsp;|&nbsp; RESETS ON SERVER RESTART</span>
+      </div>
+      <div class="log-wrap">
+        <table class="log-table">
+          <thead>
+            <tr>
+              <th>TIME</th>
+              <th>KEY</th>
+              <th>LABEL</th>
+              <th>QUERY</th>
+              <th>IP</th>
+            </tr>
+          </thead>
+          <tbody id="logBody">
+            <tr><td colspan="5" class="no-log"><span class="spin"></span> LOADING...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
   <footer>4NSIL API &nbsp;|&nbsp; ADMIN &nbsp;|&nbsp; BY <a href="https://t.me/drazeforce" target="_blank">@4NSIL!</a></footer>
 </div>
 
@@ -303,10 +384,10 @@ function logout() {
 }
 
 // ── API ───────────────────────────────────────────────────────────────────────
-async function api(method, body, extraQuery="") {
+async function api(method, body, extraQuery="", endpoint="/api/admin/keys") {
   const opts = { method, headers: { "Content-Type": "application/json" } };
   if (body) opts.body = JSON.stringify(body);
-  const res = await fetch(\`/api/admin/keys?adminkey=\${encodeURIComponent(_key)}\${extraQuery}\`, opts);
+  const res = await fetch(\`\${endpoint}?adminkey=\${encodeURIComponent(_key)}\${extraQuery}\`, opts);
   return { ok: res.ok, status: res.status, data: await res.json() };
 }
 
@@ -326,7 +407,7 @@ async function load(isLogin=false) {
   }
   _data = data.keys || {};
   _filtered = null;
-  renderStats(); renderKeys();
+  renderStats(); renderKeys(); loadLog(); loadGraph();
 }
 
 // ── Stats ─────────────────────────────────────────────────────────────────────
@@ -473,6 +554,67 @@ function timeSince(ts) {
 }
 function fmtDate(ts) {
   return new Date(ts).toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"2-digit"});
+}
+
+
+
+// ── Overall Graph ─────────────────────────────────────────────────────────────
+async function loadGraph() {
+  const { ok, data } = await api("GET", null, "", "/api/admin/stats");
+  if (!ok) return;
+
+  const usage = data.usage || {};
+  const TODAY = new Date().toISOString().slice(0,10);
+
+  // Build last 30 days
+  const days = [];
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const dk = d.toISOString().slice(0,10);
+    const lbl = d.toLocaleDateString("en-IN", { day:"2-digit", month:"short" });
+    days.push({ dk, lbl, count: usage[dk] || 0, isToday: dk === TODAY });
+  }
+
+  const max = Math.max(...days.map(d => d.count), 1);
+  const container = document.getElementById("graphBars");
+
+  container.innerHTML = days.map(d => {
+    const h   = Math.max(3, Math.round((d.count / max) * 150));
+    const col = d.isToday ? "var(--cyan)" : "var(--green)";
+    const op  = d.count === 0 ? "0.2" : "0.75";
+    return \`<div class="gb-wrap" title="\${d.count} requests on \${d.lbl}">
+      <div class="gb" style="height:\${h}px;background:\${col};opacity:\${op}">
+        <div class="gb-tooltip">\${d.lbl}: \${d.count}</div>
+      </div>
+      <span class="gb-lbl">\${d.isToday ? "NOW" : d.lbl.split(" ")[0]}</span>
+    </div>\`;
+  }).join("");
+}
+
+// ── Request Log ───────────────────────────────────────────────────────────────
+async function loadLog() {
+  const { ok, data } = await api("GET", null, "", "/api/admin/log");
+  if (!ok) return;
+  const tbody = document.getElementById("logBody");
+  const entries = data.log || [];
+  if (!entries.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="no-log">NO REQUESTS YET</td></tr>';
+    return;
+  }
+  tbody.innerHTML = entries.map(e => \`
+    <tr>
+      <td style="color:var(--muted);white-space:nowrap">\${fmtTime(e.time)}</td>
+      <td><span class="ltag">\${e.key}</span></td>
+      <td style="color:var(--text)">\${e.label}</td>
+      <td style="color:var(--green)">\${e.query}</td>
+      <td style="color:var(--muted)">\${e.ip}</td>
+    </tr>\`).join("");
+}
+
+function fmtTime(ts) {
+  const d = new Date(ts);
+  return d.toLocaleDateString("en-IN",{day:"2-digit",month:"short"}) + " " +
+         d.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false});
 }
 
 // Auto-refresh every 30s

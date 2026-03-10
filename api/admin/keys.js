@@ -1,9 +1,4 @@
 // api/admin/keys.js
-// GET    /api/admin/keys?adminkey=X       → list all keys
-// POST   /api/admin/keys?adminkey=X       → create { key, label }
-// PATCH  /api/admin/keys?adminkey=X       → toggle { key, active }
-// DELETE /api/admin/keys?adminkey=X&key=Y → delete key
-
 const store = require("../../lib/store");
 
 function cors(res) {
@@ -35,14 +30,16 @@ module.exports = async function handler(req, res) {
   if (!auth(req, res)) return;
 
   if (req.method === "GET") {
-    return res.status(200).json({ keys: store.allKeys() });
+    const keys = await store.allKeys();
+    return res.status(200).json({ keys });
   }
 
   if (req.method === "POST") {
     const { key, label } = await body(req);
     if (!key) return res.status(400).json({ error: "key required" });
-    if (store.getKey(key)) return res.status(409).json({ error: "Key already exists" });
-    store.setKey(key, {
+    const existing = await store.getKey(key);
+    if (existing) return res.status(409).json({ error: "Key already exists" });
+    await store.setKey(key, {
       label: label || key, active: true,
       createdAt: new Date().toISOString(),
       totalRequests: 0, lastUsed: null, dailyUsage: {}
@@ -52,17 +49,18 @@ module.exports = async function handler(req, res) {
 
   if (req.method === "PATCH") {
     const { key, active } = await body(req);
-    const k = store.getKey(key);
+    const k = await store.getKey(key);
     if (!k) return res.status(404).json({ error: "Key not found" });
     k.active = active;
-    store.setKey(key, k);
+    await store.setKey(key, k);
     return res.status(200).json({ ok: true });
   }
 
   if (req.method === "DELETE") {
     const { key } = req.query;
-    if (!key || !store.getKey(key)) return res.status(404).json({ error: "Key not found" });
-    store.deleteKey(key);
+    const existing = await store.getKey(key);
+    if (!key || !existing) return res.status(404).json({ error: "Key not found" });
+    await store.deleteKey(key);
     return res.status(200).json({ ok: true, deleted: key });
   }
 

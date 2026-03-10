@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>4NSIL API — Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Bebas+Neue&family=Rajdhani:wght@400;600;700&display=swap" onload="this.onload=null;this.rel='stylesheet'"/>
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Bebas+Neue&family=Rajdhani:wght@400;600;700&display=swap"/></noscript>
+<style>
+:root{
+  --bg:#030508;--surface:#080d12;--border:#0f2a1e;
+  --green:#00ff88;--cyan:#00e5ff;--dim:#1a4a32;
+  --text:#c8e8d8;--muted:#3a6650;--red:#ff3355;
+  --yellow:#ffcc00;--grid:rgba(0,255,136,0.03);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);color:var(--text);font-family:'Rajdhani',sans-serif;
+  min-height:100vh;
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:32px 32px;
+}
+body::after{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:999;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.04) 2px,rgba(0,0,0,0.04) 4px);
+}
+
+/* ── LOGIN ─────────────────────────────────────────────────────────────────── */
+#loginWrap{
+  display:flex;flex-direction:column;align-items:center;
+  justify-content:center;min-height:100vh;padding:20px;
+}
+.lcard{
+  width:100%;max-width:360px;background:var(--surface);
+  border:1px solid var(--border);padding:36px 28px;position:relative;
+  clip-path:polygon(0 0,calc(100% - 20px) 0,100% 20px,100% 100%,20px 100%,0 calc(100% - 20px));
+}
+.lcard::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--green),transparent);
+}
+.llogo{font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:6px;color:var(--green);text-align:center;}
+.llogo span{color:var(--cyan);}
+.lsub{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:4px;color:var(--muted);text-align:center;margin-bottom:28px;margin-top:4px;}
+.llbl{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:3px;color:var(--muted);display:block;margin-bottom:6px;}
+.linput{
+  width:100%;background:rgba(0,0,0,0.5);border:1px solid var(--dim);color:#fff;
+  font-family:'Share Tech Mono',monospace;font-size:14px;letter-spacing:2px;
+  padding:12px 14px;outline:none;transition:border-color 0.2s;margin-bottom:16px;
+}
+.linput:focus{border-color:var(--green);}
+.lbtn{
+  width:100%;padding:14px;background:transparent;border:1px solid var(--green);color:var(--green);
+  font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:5px;cursor:pointer;
+  clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,12px 100%,0 calc(100% - 12px));
+  position:relative;overflow:hidden;transition:color 0.2s;
+}
+.lbtn::before{content:'';position:absolute;inset:0;background:var(--green);transform:translateX(-100%);transition:transform 0.25s;z-index:0;}
+.lbtn:hover::before{transform:translateX(0);}
+.lbtn:hover{color:#000;}
+.lbtn span{position:relative;z-index:1;}
+.lerr{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--red);text-align:center;margin-top:12px;display:none;}
+
+/* ── DASHBOARD ──────────────────────────────────────────────────────────────── */
+#dash{display:none;}
+header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 24px;border-bottom:1px solid var(--border);
+  background:var(--surface);position:sticky;top:0;z-index:100;
+}
+.hlogo{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:6px;}
+.hlogo span{color:var(--cyan);}
+.hbadge{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:3px;color:var(--red);border:1px solid var(--red);padding:3px 8px;}
+.hbtns{display:flex;gap:8px;}
+.hbtn{
+  background:none;border:1px solid var(--dim);color:var(--muted);
+  font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;
+  padding:6px 12px;cursor:pointer;transition:all 0.2s;
+}
+.hbtn.green:hover{border-color:var(--green);color:var(--green);}
+.hbtn.red:hover{border-color:var(--red);color:var(--red);}
+
+.main{padding:24px;max-width:1200px;margin:0 auto;}
+
+/* Stats */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px;}
+.stat{
+  background:var(--surface);border:1px solid var(--border);padding:16px 18px;
+  clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,0 100%);
+}
+.sv{font-family:'Bebas Neue',sans-serif;font-size:34px;letter-spacing:2px;color:var(--green);line-height:1;}
+.sl{font-family:'Share Tech Mono',monospace;font-size:8px;letter-spacing:3px;color:var(--muted);margin-top:4px;}
+
+/* Section */
+.sec{background:var(--surface);border:1px solid var(--border);margin-bottom:20px;}
+.sec-hdr{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 18px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px;
+}
+.sec-title{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:4px;color:var(--green);}
+.search-inp{
+  background:rgba(0,0,0,0.4);border:1px solid var(--dim);color:#fff;
+  font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:1px;
+  padding:7px 12px;outline:none;transition:border-color 0.2s;width:200px;
+}
+.search-inp:focus{border-color:var(--green);}
+.search-inp::placeholder{color:var(--muted);}
+
+/* Keys grid */
+.kgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px;padding:16px;}
+.kcard{background:rgba(0,0,0,0.3);border:1px solid var(--border);padding:16px;transition:border-color 0.2s;}
+.kcard:hover{border-color:var(--dim);}
+.kcard.off{border-color:rgba(255,51,85,0.35);opacity:0.7;}
+.ktop{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.kname{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:3px;color:var(--text);}
+.kbadge{font-family:'Share Tech Mono',monospace;font-size:8px;letter-spacing:2px;padding:3px 7px;border:1px solid;}
+.kbadge.on{color:var(--green);border-color:var(--green);}
+.kbadge.off{color:var(--red);border-color:var(--red);}
+.krows{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;margin-bottom:12px;}
+.kr{display:flex;flex-direction:column;gap:1px;}
+.krl{font-family:'Share Tech Mono',monospace;font-size:7px;letter-spacing:2px;color:var(--muted);}
+.krv{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+/* Mini chart */
+.mchart{margin-bottom:12px;}
+.mc-title{font-family:'Share Tech Mono',monospace;font-size:7px;letter-spacing:2px;color:var(--muted);margin-bottom:5px;}
+.bars{display:flex;gap:3px;align-items:flex-end;height:36px;}
+.bwrap{display:flex;flex-direction:column;align-items:center;gap:2px;flex:1;}
+.bar{width:100%;min-height:2px;border-radius:1px 1px 0 0;transition:opacity 0.2s;opacity:0.7;}
+.bar:hover{opacity:1;}
+.blbl{font-family:'Share Tech Mono',monospace;font-size:6px;color:var(--muted);}
+
+/* Key actions */
+.kacts{display:flex;gap:6px;padding-top:10px;border-top:1px solid var(--border);flex-wrap:wrap;}
+.kbtn{
+  font-family:'Share Tech Mono',monospace;font-size:8px;letter-spacing:2px;
+  padding:5px 10px;cursor:pointer;background:none;border:1px solid;transition:all 0.15s;
+}
+.kbtn.copy{border-color:var(--dim);color:var(--muted);}
+.kbtn.copy:hover{border-color:var(--cyan);color:var(--cyan);}
+.kbtn.block{border-color:var(--red);color:var(--red);}
+.kbtn.block:hover{background:var(--red);color:#000;}
+.kbtn.unblock{border-color:var(--green);color:var(--green);}
+.kbtn.unblock:hover{background:var(--green);color:#000;}
+.kbtn.del{border-color:var(--muted);color:var(--muted);}
+.kbtn.del:hover{border-color:var(--red);color:var(--red);}
+.no-keys{padding:32px;text-align:center;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:3px;color:var(--muted);}
+
+/* Modals */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:500;align-items:center;justify-content:center;padding:20px;}
+.overlay.open{display:flex;}
+.modal{
+  background:var(--surface);border:1px solid var(--border);max-width:440px;width:100%;
+  padding:28px;position:relative;
+  clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,16px 100%,0 calc(100% - 16px));
+}
+.modal::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);}
+.mtitle{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:4px;color:var(--cyan);margin-bottom:18px;}
+.mfield{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;}
+.mlbl{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:3px;color:var(--muted);}
+.minput{
+  width:100%;background:rgba(0,0,0,0.4);border:1px solid var(--dim);color:#fff;
+  font-family:'Share Tech Mono',monospace;font-size:14px;letter-spacing:2px;
+  padding:11px 14px;outline:none;transition:border-color 0.2s;
+}
+.minput:focus{border-color:var(--cyan);}
+.mhint{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);margin-top:3px;}
+.mfooter{display:flex;gap:10px;justify-content:flex-end;margin-top:8px;}
+.mbtn{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;padding:9px 18px;cursor:pointer;background:none;border:1px solid;transition:all 0.2s;}
+.mbtn.ok{border-color:var(--green);color:var(--green);}
+.mbtn.ok:hover{background:var(--green);color:#000;}
+.mbtn.cancel{border-color:var(--dim);color:var(--muted);}
+.mbtn.cancel:hover{border-color:var(--text);color:var(--text);}
+.merr{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--red);margin-top:8px;display:none;}
+.mbody{font-size:14px;line-height:1.7;color:var(--text);margin-bottom:20px;}
+
+/* Pulse dot */
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;margin-right:5px;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{display:inline-block;width:10px;height:10px;border:2px solid var(--dim);border-top-color:var(--green);border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle;margin-right:4px;}
+
+footer{text-align:center;padding:20px;font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:3px;color:var(--muted);border-top:1px solid var(--border);}
+footer a{color:inherit;text-decoration:none;transition:color 0.2s;}
+footer a:hover{color:var(--green);}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginWrap">
+  <div class="lcard">
+    <div class="llogo">4N<span>SIL</span></div>
+    <div class="lsub">// ADMIN TERMINAL</div>
+    <label class="llbl">ADMIN KEY</label>
+    <input class="linput" type="password" id="adminInp" placeholder="enter admin key" autocomplete="off"/>
+    <button class="lbtn" onclick="doLogin()"><span>ACCESS SYSTEM</span></button>
+    <div class="lerr" id="lerr">⚠ INVALID KEY — ACCESS DENIED</div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dash">
+  <header>
+    <div style="display:flex;align-items:center;gap:14px;">
+      <div class="hlogo">4N<span>SIL</span></div>
+      <div class="hbadge">ADMIN</div>
+    </div>
+    <div class="hbtns">
+      <button class="hbtn green" onclick="openAdd()">+ NEW KEY</button>
+      <button class="hbtn green" onclick="load()">REFRESH</button>
+      <button class="hbtn red"   onclick="logout()">LOGOUT</button>
+    </div>
+  </header>
+
+  <div class="main">
+
+    <!-- Stats -->
+    <div class="stats">
+      <div class="stat"><div class="sv" id="sTotal">—</div><div class="sl">TOTAL KEYS</div></div>
+      <div class="stat"><div class="sv" id="sActive" style="color:var(--green)">—</div><div class="sl">ACTIVE</div></div>
+      <div class="stat"><div class="sv" id="sBlocked" style="color:var(--red)">—</div><div class="sl">BLOCKED</div></div>
+      <div class="stat"><div class="sv" id="sReqs" style="color:var(--cyan)">—</div><div class="sl">TOTAL REQUESTS</div></div>
+      <div class="stat"><div class="sv" id="sToday" style="color:var(--yellow)">—</div><div class="sl">TODAY</div></div>
+    </div>
+
+    <!-- Keys -->
+    <div class="sec">
+      <div class="sec-hdr">
+        <div class="sec-title">// API KEYS</div>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <input class="search-inp" type="text" id="searchInp" placeholder="SEARCH KEY..." oninput="filterKeys(this.value)"/>
+          <span style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;">
+            <span class="dot"></span>LIVE
+          </span>
+        </div>
+      </div>
+      <div id="kgrid" class="kgrid">
+        <div class="no-keys"><span class="spin"></span> LOADING...</div>
+      </div>
+    </div>
+
+  </div>
+  <footer>4NSIL API &nbsp;|&nbsp; ADMIN &nbsp;|&nbsp; BY <a href="https://t.me/drazeforce" target="_blank">@4NSIL!</a></footer>
+</div>
+
+<!-- ADD KEY MODAL -->
+<div class="overlay" id="addModal">
+  <div class="modal">
+    <div class="mtitle">// NEW API KEY</div>
+    <div class="mfield">
+      <label class="mlbl">KEY STRING</label>
+      <input class="minput" id="nkStr" type="text" placeholder="e.g. drazeX2" autocomplete="off" spellcheck="false"/>
+      <div class="mhint">What your friend puts in ?key=</div>
+    </div>
+    <div class="mfield">
+      <label class="mlbl">LABEL (optional)</label>
+      <input class="minput" id="nkLabel" type="text" placeholder="e.g. Raj's Key" autocomplete="off"/>
+    </div>
+    <div class="merr" id="addErr"></div>
+    <div class="mfooter">
+      <button class="mbtn cancel" onclick="closeModal('addModal')">CANCEL</button>
+      <button class="mbtn ok" onclick="addKey()">CREATE</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM MODAL -->
+<div class="overlay" id="confModal">
+  <div class="modal">
+    <div class="mtitle" id="confTitle">// CONFIRM</div>
+    <div class="mbody" id="confBody"></div>
+    <div class="mfooter">
+      <button class="mbtn cancel" onclick="closeModal('confModal')">CANCEL</button>
+      <button class="mbtn ok" id="confOk">CONFIRM</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const TODAY = new Date().toISOString().slice(0,10);
+let _key = "", _data = {}, _filtered = null;
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+function doLogin() {
+  _key = document.getElementById("adminInp").value.trim();
+  if (!_key) return;
+  load(true);
+}
+document.getElementById("adminInp").addEventListener("keydown", e => { if (e.key==="Enter") doLogin(); });
+
+function logout() {
+  _key = ""; _data = {};
+  document.getElementById("dash").style.display = "none";
+  document.getElementById("loginWrap").style.display = "flex";
+  document.getElementById("adminInp").value = "";
+  document.getElementById("lerr").style.display = "none";
+}
+
+// ── API ───────────────────────────────────────────────────────────────────────
+async function api(method, body, extraQuery="") {
+  const opts = { method, headers: { "Content-Type": "application/json" } };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(`/api/admin/keys?adminkey=${encodeURIComponent(_key)}${extraQuery}`, opts);
+  return { ok: res.ok, status: res.status, data: await res.json() };
+}
+
+async function load(isLogin=false) {
+  const { ok, data } = await api("GET");
+  if (!ok) {
+    if (isLogin) {
+      const e = document.getElementById("lerr");
+      e.style.display = "block";
+      setTimeout(() => e.style.display="none", 3000);
+    }
+    return;
+  }
+  if (isLogin) {
+    document.getElementById("loginWrap").style.display = "none";
+    document.getElementById("dash").style.display = "block";
+  }
+  _data = data.keys || {};
+  _filtered = null;
+  renderStats(); renderKeys();
+}
+
+// ── Stats ─────────────────────────────────────────────────────────────────────
+function renderStats() {
+  const keys = Object.values(_data);
+  document.getElementById("sTotal").textContent   = keys.length;
+  document.getElementById("sActive").textContent  = keys.filter(k=>k.active).length;
+  document.getElementById("sBlocked").textContent = keys.filter(k=>!k.active).length;
+  document.getElementById("sReqs").textContent    = keys.reduce((a,k)=>a+(k.totalRequests||0),0);
+  document.getElementById("sToday").textContent   = keys.reduce((a,k)=>a+((k.dailyUsage||{})[TODAY]||0),0);
+}
+
+// ── Keys ──────────────────────────────────────────────────────────────────────
+function filterKeys(q) {
+  const v = q.trim().toLowerCase();
+  _filtered = v ? Object.entries(_data).filter(([k,d])=>k.toLowerCase().includes(v)||(d.label||"").toLowerCase().includes(v)) : null;
+  renderKeys();
+}
+
+function renderKeys() {
+  const grid    = document.getElementById("kgrid");
+  const entries = (_filtered || Object.entries(_data)).sort((a,b)=>(b[1].totalRequests||0)-(a[1].totalRequests||0));
+
+  if (!entries.length) {
+    grid.innerHTML = '<div class="no-keys">NO KEYS FOUND</div>'; return;
+  }
+
+  grid.innerHTML = entries.map(([ks, k]) => {
+    const todayN  = (k.dailyUsage||{})[TODAY]||0;
+    const lastUsed= k.lastUsed ? timeSince(k.lastUsed) : "NEVER";
+    const created = k.createdAt ? fmtDate(k.createdAt) : "—";
+    const on      = k.active;
+
+    const blockBtn = on
+      ? `<button class="kbtn block" data-a="block" data-k="${ks}">BLOCK</button>`
+      : `<button class="kbtn unblock" data-a="unblock" data-k="${ks}">UNBLOCK</button>`;
+
+    return `<div class="kcard${on?'':' off'}">
+      <div class="ktop">
+        <span class="kname">${k.label||ks}</span>
+        <span class="kbadge ${on?'on':'off'}">${on?'ACTIVE':'BLOCKED'}</span>
+      </div>
+      <div class="krows">
+        <div class="kr"><span class="krl">KEY</span><span class="krv" style="color:var(--cyan)">${ks}</span></div>
+        <div class="kr"><span class="krl">TOTAL REQUESTS</span><span class="krv" style="color:var(--green)">${k.totalRequests||0}</span></div>
+        <div class="kr"><span class="krl">TODAY</span><span class="krv" style="color:var(--yellow)">${todayN}</span></div>
+        <div class="kr"><span class="krl">LAST USED</span><span class="krv">${lastUsed}</span></div>
+        <div class="kr"><span class="krl">CREATED</span><span class="krv">${created}</span></div>
+      </div>
+      ${miniChart(k.dailyUsage||{})}
+      <div class="kacts">
+        <button class="kbtn copy" data-a="copy" data-k="${ks}">COPY KEY</button>
+        ${blockBtn}
+        <button class="kbtn del" data-a="del" data-k="${ks}">DELETE</button>
+      </div>
+    </div>`;
+  }).join("");
+
+  grid.onclick = e => {
+    const b = e.target.closest("[data-a]"); if (!b) return;
+    const { a, k } = b.dataset;
+    if (a==="copy")    copyKey(k, b);
+    if (a==="block")   confirm2(`BLOCK KEY: ${k}`,   `Block "${k}"? Requests with this key will be rejected.`, ()=>toggle(k,false));
+    if (a==="unblock") confirm2(`UNBLOCK KEY: ${k}`, `Restore access for "${k}"?`, ()=>toggle(k,true));
+    if (a==="del")     confirm2(`DELETE KEY: ${k}`,  `Permanently delete "${k}"? Cannot be undone.`, ()=>del(k));
+  };
+}
+
+function miniChart(usage) {
+  const days = [];
+  for (let i=6;i>=0;i--) {
+    const d = new Date(); d.setDate(d.getDate()-i);
+    const dk = d.toISOString().slice(0,10);
+    days.push({ lbl: d.toLocaleDateString("en-IN",{weekday:"short"}).slice(0,2).toUpperCase(), n: usage[dk]||0, today: dk===TODAY });
+  }
+  const max = Math.max(...days.map(d=>d.n), 1);
+  return `<div class="mchart"><div class="mc-title">LAST 7 DAYS</div><div class="bars">${
+    days.map(d=>{
+      const h = Math.max(2, Math.round((d.n/max)*36));
+      return `<div class="bwrap" title="${d.n} requests"><div class="bar" style="height:${h}px;background:${d.today?'var(--cyan)':'var(--green)'}"></div><span class="blbl">${d.lbl}</span></div>`;
+    }).join("")
+  }</div></div>`;
+}
+
+// ── Actions ───────────────────────────────────────────────────────────────────
+async function addKey() {
+  const ks = document.getElementById("nkStr").value.trim();
+  const lb = document.getElementById("nkLabel").value.trim();
+  const errEl = document.getElementById("addErr");
+  if (!ks) { showErr("addErr","KEY STRING IS REQUIRED"); return; }
+  if (/\s/.test(ks)) { showErr("addErr","KEY CANNOT HAVE SPACES"); return; }
+  const { ok, data } = await api("POST", { key:ks, label:lb||ks });
+  if (!ok) { showErr("addErr", data.error||"FAILED"); return; }
+  closeModal("addModal");
+  document.getElementById("nkStr").value = "";
+  document.getElementById("nkLabel").value = "";
+  errEl.style.display = "none";
+  load();
+}
+
+async function toggle(ks, active) { await api("PATCH",{key:ks,active}); load(); }
+async function del(ks)            { await api("DELETE",null,`&key=${encodeURIComponent(ks)}`); load(); }
+
+function copyKey(ks, btn) {
+  navigator.clipboard.writeText(ks).then(()=>{
+    const o=btn.textContent; btn.textContent="COPIED!"; btn.style.color="var(--green)";
+    setTimeout(()=>{btn.textContent=o;btn.style.color="";},1500);
+  });
+}
+
+// ── Modals ────────────────────────────────────────────────────────────────────
+function openAdd() {
+  document.getElementById("addModal").classList.add("open");
+  setTimeout(()=>document.getElementById("nkStr").focus(),80);
+}
+function closeModal(id) { document.getElementById(id).classList.remove("open"); }
+
+function confirm2(title, body, onOk) {
+  document.getElementById("confTitle").textContent = "// "+title;
+  document.getElementById("confBody").textContent  = body;
+  document.getElementById("confOk").onclick = ()=>{ closeModal("confModal"); onOk(); };
+  document.getElementById("confModal").classList.add("open");
+}
+
+function showErr(id, msg) {
+  const e=document.getElementById(id); e.textContent=msg; e.style.display="block";
+}
+
+document.querySelectorAll(".overlay").forEach(el=>{
+  el.addEventListener("click",e=>{ if(e.target===el) el.classList.remove("open"); });
+});
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape") document.querySelectorAll(".overlay.open").forEach(el=>el.classList.remove("open"));
+  if(e.key==="Enter"&&document.getElementById("addModal").classList.contains("open")) addKey();
+});
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function timeSince(ts) {
+  const s=Math.floor((Date.now()-new Date(ts))/1000);
+  if(s<60) return s+"s ago";
+  if(s<3600) return Math.floor(s/60)+"m ago";
+  if(s<86400) return Math.floor(s/3600)+"h ago";
+  return Math.floor(s/86400)+"d ago";
+}
+function fmtDate(ts) {
+  return new Date(ts).toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"2-digit"});
+}
+
+// Auto-refresh every 30s
+setInterval(()=>{ if(document.getElementById("dash").style.display!=="none") load(); },30000);
+</script>
+</body>
+</html>
